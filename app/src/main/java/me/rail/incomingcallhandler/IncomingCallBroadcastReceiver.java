@@ -1,5 +1,6 @@
 package me.rail.incomingcallhandler;
 
+import android.annotation.SuppressLint;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -17,8 +18,10 @@ import android.widget.TextView;
 
 public class IncomingCallBroadcastReceiver extends BroadcastReceiver {
     private static WindowManager windowManager;
+    @SuppressLint("StaticFieldLeak")
     private static ViewGroup windowLayout;
 
+    private static final float WINDOW_WIDTH_RATIO = 0.8f;
     private WindowManager.LayoutParams params;
     private float x;
     private float y;
@@ -55,43 +58,6 @@ public class IncomingCallBroadcastReceiver extends BroadcastReceiver {
         windowManager.addView(windowLayout, params);
     }
 
-    private void setOnTouchListener() {
-        windowLayout.setOnTouchListener((view, event) -> {
-            switch (event.getAction()) {
-                case MotionEvent.ACTION_DOWN:
-                    x = event.getRawX();
-                    y = event.getRawY();
-                    break;
-                case MotionEvent.ACTION_MOVE:
-                    params.x = params.x - (int) (x - event.getRawX());
-                    params.y = params.y - (int) (y - event.getRawY());
-                    windowManager.updateViewLayout(windowLayout, params);
-                    x = event.getRawX();
-                    y = event.getRawY();
-                    break;
-                case MotionEvent.ACTION_UP:
-                    view.performClick();
-                default:
-                    break;
-            }
-            return false;
-        });
-    }
-
-    private void closeWindow() {
-        if (windowLayout != null) {
-            windowManager.removeView(windowLayout);
-            windowLayout = null;
-        }
-    }
-
-    private int getWindowsTypeParameter() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            return WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
-        }
-        return WindowManager.LayoutParams.TYPE_PHONE;
-    }
-
     private void getLayoutParams() {
         params = new WindowManager.LayoutParams(
                 WindowManager.LayoutParams.WRAP_CONTENT,
@@ -109,9 +75,50 @@ public class IncomingCallBroadcastReceiver extends BroadcastReceiver {
         params.width = getWindowWidth();
     }
 
+    private int getWindowsTypeParameter() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            return WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
+        }
+        return WindowManager.LayoutParams.TYPE_PHONE;
+    }
+
     private int getWindowWidth() {
         DisplayMetrics metrics = new DisplayMetrics();
         windowManager.getDefaultDisplay().getMetrics(metrics);
-        return (int) (0.939 * (double) metrics.widthPixels);
+        return (int) (WINDOW_WIDTH_RATIO * (double) metrics.widthPixels);
+    }
+
+    private void setOnTouchListener() {
+        windowLayout.setOnTouchListener((view, event) -> {
+            switch (event.getAction()) {
+                case MotionEvent.ACTION_DOWN:
+                    x = event.getRawX();
+                    y = event.getRawY();
+                    break;
+                case MotionEvent.ACTION_MOVE:
+                    updateWindowLayoutParams(event);
+                    break;
+                case MotionEvent.ACTION_UP:
+                    view.performClick();
+                default:
+                    break;
+            }
+            return false;
+        });
+    }
+
+    private void updateWindowLayoutParams(MotionEvent event) {
+        params.x = params.x - (int) (x - event.getRawX());
+        params.y = params.y - (int) (y - event.getRawY());
+        windowManager.updateViewLayout(windowLayout, params);
+        x = event.getRawX();
+        y = event.getRawY();
+    }
+
+    private void closeWindow() {
+        if (windowLayout != null) {
+            windowManager.removeView(windowLayout);
+            windowLayout = null;
+        }
     }
 }

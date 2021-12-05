@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="number_text_view_margin">30dp</dimen>
+    <dimen name="cancel_button_size">15dp</dimen>
+    <dimen name="cancel_button_margin">10dp</dimen>
+    <dimen name="number_text_size">20sp</dimen>
+</resources>

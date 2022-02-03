@@ -1,4 +1,4 @@
-This app demonstrates examples of usage:
+This Android app demonstrates examples of usage:
 1. ```BroadcastReceiver``` for catching calls.
 2. Creating a window from the ```BroadcastReceiver```.
 3. Dragging the created window.

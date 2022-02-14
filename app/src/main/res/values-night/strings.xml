@@ -1,5 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Incoming Call Handler</string>
     <string name="get_runtime_permissions">GET RUNTIME PERMISSIONS</string>
     <string name="get_special_permissions">GET_SPECIAL_PERMISSIONS</string>
 </resources>

@@ -1,61 +1,123 @@
 package me.rail.incomingcallhandler;
 
 import android.Manifest;
-import android.app.Activity;
-import android.content.Intent;
-import android.content.pm.PackageManager;
-import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
-import android.provider.Settings;
+import android.view.View;
+import android.widget.Button;
 
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
+
+import java.util.ArrayList;
+
+import me.rail.incomingcallhandler.permission.GoingToSettingsSnackbar;
+import me.rail.incomingcallhandler.permission.RuntimePermissionRequester;
+import me.rail.incomingcallhandler.permission.SpecialPermissionRequester;
 
 public class MainActivity extends AppCompatActivity {
 
-    private final ActivityResultLauncher<Intent> alertWindowPermissionResultLauncher =
-            registerForActivityResult(new ActivityResultContracts.StartActivityForResult(),
-            result -> {
-                if (result.getResultCode() == Activity.RESULT_OK) {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                        if (!Settings.canDrawOverlays(this)) {
-                            checkSystemAlertWindowPermission();
-                        }
-                    }
-                }
-            });
+    private SpecialPermissionRequester specialPermissionRequester;
+    private RuntimePermissionRequester runtimePermissionRequester;
+
+    private final String[] permissions = new String[]{
+            Manifest.permission.READ_PHONE_STATE,
+            Manifest.permission.READ_CALL_LOG
+    };
+    private ArrayList<String> notGrantedPermissions;
+
+    private Button getRuntimePermissions;
+    private Button getSpecialPermissions;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        checkSystemAlertWindowPermission();
-        checkPermissions();
-    }
+        specialPermissionRequester = new SpecialPermissionRequester(this);
+        runtimePermissionRequester = new RuntimePermissionRequester(this);
 
-    private void checkSystemAlertWindowPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (!Settings.canDrawOverlays(this)) {
-                Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                        Uri.parse("package:" + getPackageName()));
-                alertWindowPermissionResultLauncher.launch(intent);
-            }
+        getRuntimePermissions = findViewById(R.id.requestRuntimePermission);
+        setOnGetPermissionsClickListener();
+        getSpecialPermissions = findViewById(R.id.requestSpecialPermission);
+        setOnGetSpecialPermissionsClickListener();
+
+        if (!specialPermissionRequester.checkSystemAlertWindowPermission()) {
+            specialPermissionRequester.requestSystemAlertWindowPermission();
+        }
+        if (!runtimePermissionRequester.checkSelfPermissions(permissions)) {
+            runtimePermissionRequester.requestPermissions();
         }
     }
 
-    private void checkPermissions() {
-        if (ContextCompat.checkSelfPermission(MainActivity.this,
-                Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED ||
-                ContextCompat.checkSelfPermission(MainActivity.this,
-                Manifest.permission.READ_CALL_LOG)  != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(MainActivity.this,
-                    new String[]{Manifest.permission.READ_PHONE_STATE,
-                    Manifest.permission.READ_CALL_LOG}, 0);
+    @Override
+    protected void onStart() {
+        super.onStart();
+
+        checkSpecialPermissions();
+        checkRuntimePermissions();
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        notGrantedPermissions =
+                runtimePermissionRequester.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        setGetRuntimePermissionsVisibility(notGrantedPermissions.isEmpty());
+    }
+
+    private void setOnGetPermissionsClickListener() {
+        getRuntimePermissions.setOnClickListener(view -> {
+            checkPermissionsForRationale();
+            checkDeniedPermissions(view);
+        });
+    }
+
+    private void setOnGetSpecialPermissionsClickListener() {
+        getSpecialPermissions.setOnClickListener(view ->
+                specialPermissionRequester.requestSystemAlertWindowPermission());
+    }
+
+    private void checkSpecialPermissions() {
+        Boolean isSpecialPermissionGranted = specialPermissionRequester.checkSystemAlertWindowPermission();
+        setGetSpecialPermissionsVisibility(isSpecialPermissionGranted);
+    }
+
+    private void checkRuntimePermissions() {
+        Boolean isAllRuntimePermissionsGranted = runtimePermissionRequester.checkSelfPermissions(permissions);
+        setGetRuntimePermissionsVisibility(isAllRuntimePermissionsGranted);
+    }
+
+    private void setGetSpecialPermissionsVisibility(Boolean hide) {
+        if (hide) {
+            getSpecialPermissions.setVisibility(View.GONE);
+        } else {
+            getSpecialPermissions.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private void setGetRuntimePermissionsVisibility(Boolean hide) {
+        if (hide) {
+            getRuntimePermissions.setVisibility(View.GONE);
+        } else {
+            getRuntimePermissions.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private void checkPermissionsForRationale() {
+        ArrayList<String> permissionsForRationale = runtimePermissionRequester.getPermissionsForRationale(notGrantedPermissions);
+        if (!permissionsForRationale.isEmpty()) {
+            runtimePermissionRequester.setPermissionsForRequest(permissionsForRationale);
+            runtimePermissionRequester.requestPermissions();
+        }
+    }
+
+    private void checkDeniedPermissions(View view) {
+        ArrayList<String> deniedPermissions = runtimePermissionRequester.getDeniedPermissions(notGrantedPermissions);
+        if (!deniedPermissions.isEmpty()) {
+            GoingToSettingsSnackbar goingToSettingsSnackbar = new GoingToSettingsSnackbar(this, view);
+            goingToSettingsSnackbar.showSnackbar("You must grant permissions in Settings!", "Settings");
         }
     }
 }

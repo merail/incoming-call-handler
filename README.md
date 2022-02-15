@@ -8,7 +8,9 @@ The following permissions are required to complete these steps:
 2. ```android.permission.READ_CALL_LOG```.
 3. ```android.permission.SYSTEM_ALERT_WINDOW```.
 
-Handling will also work when the application is closed and after a device reboot.
+**Note**: [Request Permissions Tool](https://github.com/merail/android-request-permissions-tool) is used for handling permissions.
+
+Handling of incoming calls will also work when the application is closed and after a device reboot.
 
 **Note**: Android Marshmellow may have problems with handling due to security policy.
 

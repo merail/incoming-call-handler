@@ -10,9 +10,9 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import java.util.ArrayList;
 
-import me.rail.incomingcallhandler.permission.GoingToSettingsSnackbar;
-import me.rail.incomingcallhandler.permission.RuntimePermissionRequester;
-import me.rail.incomingcallhandler.permission.SpecialPermissionRequester;
+import me.rail.tools.permissions.GoingToSettingsSnackbar;
+import me.rail.tools.permissions.RuntimePermissionRequester;
+import me.rail.tools.permissions.SpecialPermissionRequester;
 
 public class MainActivity extends AppCompatActivity {
 

@@ -21,7 +21,7 @@ public class MainActivity extends AppCompatActivity {
     private SpecialPermissionRequester specialPermissionRequester;
     private RuntimePermissionRequester runtimePermissionRequester;
 
-    private final String[] permissions = new String[]{
+    private final String[] runtimePermissions = new String[]{
             Manifest.permission.READ_PHONE_STATE,
             Manifest.permission.READ_CALL_LOG
     };
@@ -34,8 +34,8 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        specialPermissionRequester = new SpecialPermissionRequester(this);
-        runtimePermissionRequester = new RuntimePermissionRequester(this, permissions);
+        specialPermissionRequester = new SpecialPermissionRequester(this, Manifest.permission.SYSTEM_ALERT_WINDOW);
+        runtimePermissionRequester = new RuntimePermissionRequester(this, runtimePermissions);
 
         getRuntimePermissions = findViewById(R.id.requestRuntimePermission);
         setOnGetPermissionsClickListener();
@@ -45,8 +45,8 @@ public class MainActivity extends AppCompatActivity {
         if (!runtimePermissionRequester.areAllPermissionsGranted()) {
             runtimePermissionRequester.requestPermissions(this::onRuntimePermissionsRequestResult);
         }
-        if (!specialPermissionRequester.checkSystemAlertWindowPermission()) {
-            specialPermissionRequester.requestSystemAlertWindowPermission();
+        if (!specialPermissionRequester.isPermissionGranted()) {
+            specialPermissionRequester.requestPermission();
         }
     }
 
@@ -54,16 +54,16 @@ public class MainActivity extends AppCompatActivity {
     protected void onStart() {
         super.onStart();
 
-        checkSpecialPermissions();
-        checkRuntimePermissions();
+        setGetSpecialPermissionsVisibility(specialPermissionRequester.isPermissionGranted());
+        setGetRuntimePermissionsVisibility(runtimePermissionRequester.areAllPermissionsGranted());
     }
 
     private void setOnGetPermissionsClickListener() {
-        getRuntimePermissions.setOnClickListener(view -> runtimePermissionRequester
-                .requestPermissions(this::onRuntimePermissionsRequestResult));
+        getRuntimePermissions.setOnClickListener(view -> runtimePermissionRequester.requestPermissions(this::onRuntimePermissionsRequestResult));
     }
 
     private Unit onRuntimePermissionsRequestResult(Map<String, ? extends RuntimePermissionState> permissionsStateMap) {
+        setGetRuntimePermissionsVisibility(runtimePermissionRequester.areAllPermissionsGranted());
         if (permissionsStateMap.containsValue(RuntimePermissionState.PERMANENTLY_DENIED)) {
             SettingsOpeningSnackbar settingsOpeningSnackbar = new SettingsOpeningSnackbar(
                     this,
@@ -75,18 +75,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setOnGetSpecialPermissionsClickListener() {
-        getSpecialPermissions.setOnClickListener(view -> specialPermissionRequester
-                .requestSystemAlertWindowPermission());
-    }
-
-    private void checkSpecialPermissions() {
-        Boolean isSpecialPermissionGranted = specialPermissionRequester.checkSystemAlertWindowPermission();
-        setGetSpecialPermissionsVisibility(isSpecialPermissionGranted);
-    }
-
-    private void checkRuntimePermissions() {
-        Boolean isAllRuntimePermissionsGranted = runtimePermissionRequester.areAllPermissionsGranted();
-        setGetRuntimePermissionsVisibility(isAllRuntimePermissionsGranted);
+        getSpecialPermissions.setOnClickListener(view -> specialPermissionRequester.requestPermission());
     }
 
     private void setGetSpecialPermissionsVisibility(Boolean hide) {

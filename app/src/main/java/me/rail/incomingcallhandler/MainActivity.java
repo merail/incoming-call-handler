@@ -9,9 +9,10 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import java.util.Map;
 
+import kotlin.Pair;
 import kotlin.Unit;
 
-import merail.tools.permissions.common.SettingsOpeningSnackbar;
+import merail.tools.permissions.SettingsSnackbar;
 import merail.tools.permissions.runtime.RuntimePermissionRequester;
 import merail.tools.permissions.runtime.RuntimePermissionState;
 import merail.tools.permissions.special.SpecialPermissionRequester;
@@ -46,7 +47,7 @@ public class MainActivity extends AppCompatActivity {
             runtimePermissionRequester.requestPermissions(this::onRuntimePermissionsRequestResult);
         }
         if (!specialPermissionRequester.isPermissionGranted()) {
-            specialPermissionRequester.requestPermission();
+            specialPermissionRequester.requestPermission(this::onSpecialPermissionsRequestResult);
         }
     }
 
@@ -65,7 +66,7 @@ public class MainActivity extends AppCompatActivity {
     private Unit onRuntimePermissionsRequestResult(Map<String, ? extends RuntimePermissionState> permissionsStateMap) {
         setGetRuntimePermissionsVisibility(runtimePermissionRequester.areAllPermissionsGranted());
         if (permissionsStateMap.containsValue(RuntimePermissionState.PERMANENTLY_DENIED)) {
-            SettingsOpeningSnackbar settingsOpeningSnackbar = new SettingsOpeningSnackbar(
+            SettingsSnackbar settingsOpeningSnackbar = new SettingsSnackbar(
                     this,
                     getWindow().getDecorView()
             );
@@ -74,8 +75,13 @@ public class MainActivity extends AppCompatActivity {
         return Unit.INSTANCE;
     }
 
+    private Unit onSpecialPermissionsRequestResult(Pair<String, Boolean> permissionStatePair) {
+        setGetSpecialPermissionsVisibility(specialPermissionRequester.isPermissionGranted());
+        return Unit.INSTANCE;
+    }
+
     private void setOnGetSpecialPermissionsClickListener() {
-        getSpecialPermissions.setOnClickListener(view -> specialPermissionRequester.requestPermission());
+        getSpecialPermissions.setOnClickListener(view -> specialPermissionRequester.requestPermission(this::onSpecialPermissionsRequestResult));
     }
 
     private void setGetSpecialPermissionsVisibility(Boolean hide) {

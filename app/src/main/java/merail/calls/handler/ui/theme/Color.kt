@@ -1,4 +1,4 @@
-package me.rail.incomingcallhandler.ui.theme
+package merail.calls.handler.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

@@ -1,4 +1,4 @@
-package me.rail.incomingcallhandler.ui.theme
+package merail.calls.handler.ui.theme
 
 import android.app.Activity
 import android.os.Build

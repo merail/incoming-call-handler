@@ -1,4 +1,4 @@
-package me.rail.incomingcallhandler
+package merail.calls.handler
 
 import android.Manifest
 import android.os.Bundle
@@ -23,12 +23,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import me.rail.incomingcallhandler.ui.theme.IncomingCallHandlerTheme
+import merail.calls.handler.ui.theme.IncomingCallHandlerTheme
 import merail.tools.permissions.SettingsSnackbar
 import merail.tools.permissions.runtime.RuntimePermissionRequester
 import merail.tools.permissions.runtime.RuntimePermissionState
 import merail.tools.permissions.special.SpecialPermissionRequester
-import me.rail.incomingcallhandler.ui.theme.Typography
+import merail.calls.handler.ui.theme.Typography
 
 class MainActivity : ComponentActivity() {
 

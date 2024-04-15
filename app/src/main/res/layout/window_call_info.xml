@@ -10,7 +10,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginVertical="@dimen/number_text_view_margin"
-        android:textColor="@color/black"
+        android:textColor="@android:color/black"
         android:textSize="@dimen/number_text_size"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"

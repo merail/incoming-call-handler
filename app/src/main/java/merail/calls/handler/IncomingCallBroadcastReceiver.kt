@@ -1,7 +1,6 @@
 package merail.calls.handler
 
 import android.annotation.SuppressLint
-import android.app.ActivityManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -9,7 +8,6 @@ import android.graphics.PixelFormat
 import android.os.Build
 import android.telephony.TelephonyManager
 import android.util.DisplayMetrics
-import android.util.Log
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View

@@ -1,9 +1,16 @@
 package merail.calls.handler
 
 import android.Manifest
+import android.app.Activity
+import android.app.role.RoleManager
+import android.content.Context
+import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -37,7 +44,8 @@ class MainActivity : ComponentActivity() {
 
     private val runtimePermissions = arrayOf(
         Manifest.permission.READ_PHONE_STATE,
-        Manifest.permission.READ_CALL_LOG
+        Manifest.permission.READ_CONTACTS,
+        Manifest.permission.READ_CALL_LOG,
     )
 
 
@@ -86,6 +94,29 @@ class MainActivity : ComponentActivity() {
         }
         if (!runtimePermissionRequester.areAllPermissionsGranted()) {
             onRuntimePermissionsClick.invoke()
+        }
+
+        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) {
+            requestScreeningRole()
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.Q)
+    private fun requestScreeningRole(){
+        val roleManager = getSystemService(Context.ROLE_SERVICE) as RoleManager
+        val isRoleCallScreeningHeld = roleManager.isRoleHeld(RoleManager.ROLE_CALL_SCREENING)
+        if(!isRoleCallScreeningHeld){
+            val intent = roleManager.createRequestRoleIntent(RoleManager.ROLE_CALL_SCREENING)
+            val resultLauncher = registerForActivityResult(
+                ActivityResultContracts.StartActivityForResult()
+            ) {
+                if (it.resultCode == Activity.RESULT_OK) {
+                    Log.d("ScreeningRoleRequest", "Permission is granted")
+                } else {
+                    Log.d("ScreeningRoleRequest", "Permission is denied")
+                }
+            }
+            resultLauncher.launch(intent)
         }
     }
 

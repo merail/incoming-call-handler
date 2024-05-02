@@ -1,12 +1,9 @@
 package merail.calls.handler
 
 import android.annotation.SuppressLint
-import android.content.BroadcastReceiver
 import android.content.Context
-import android.content.Intent
 import android.graphics.PixelFormat
 import android.os.Build
-import android.telephony.TelephonyManager
 import android.util.DisplayMetrics
 import android.view.Gravity
 import android.view.MotionEvent
@@ -17,18 +14,15 @@ import android.view.WindowManager
 import android.widget.Button
 import android.widget.TextView
 
-
-class IncomingCallBroadcastReceiver : BroadcastReceiver() {
+class IncomingCallAlert {
 
     companion object {
-
         private const val WINDOW_WIDTH_RATIO = 0.8f
-
-        private lateinit var windowManager: WindowManager
-
-        @SuppressLint("StaticFieldLeak")
-        private var windowLayout: ViewGroup? = null
     }
+
+    private lateinit var windowManager: WindowManager
+
+    private var windowLayout: ViewGroup? = null
 
     private var params = WindowManager.LayoutParams(
         // width
@@ -39,9 +33,9 @@ class IncomingCallBroadcastReceiver : BroadcastReceiver() {
         windowType,
         // flags
         WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
-        WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
-        WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or
-        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+                WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
         // format
         PixelFormat.TRANSLUCENT,
     ).apply {
@@ -52,13 +46,6 @@ class IncomingCallBroadcastReceiver : BroadcastReceiver() {
     private var x = 0f
 
     private var y = 0f
-
-    private val Intent.needToShowWindow: Boolean
-        get() = getStringExtra(TelephonyManager.EXTRA_STATE) == TelephonyManager.EXTRA_STATE_RINGING
-
-    private val Intent.needToCloseWindow: Boolean
-        get() = getStringExtra(TelephonyManager.EXTRA_STATE) == TelephonyManager.EXTRA_STATE_IDLE ||
-                getStringExtra(TelephonyManager.EXTRA_STATE) == TelephonyManager.EXTRA_STATE_OFFHOOK
 
     private val windowType: Int
         get() = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -80,20 +67,7 @@ class IncomingCallBroadcastReceiver : BroadcastReceiver() {
             }
         }
 
-    override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action == TelephonyManager.ACTION_PHONE_STATE_CHANGED) {
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-                val phoneNumber = intent.getStringExtra(TelephonyManager.EXTRA_INCOMING_NUMBER)
-                when {
-                    phoneNumber == null -> Unit
-                    intent.needToShowWindow -> showWindow(context, phoneNumber)
-                    intent.needToCloseWindow -> closeWindow()
-                }
-            }
-        }
-    }
-
-    private fun showWindow(context: Context, phone: String) {
+    fun showWindow(context: Context, phone: String) {
         windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
         windowLayout = View.inflate(context, R.layout.window_call_info, null) as ViewGroup?
         windowLayout?.let {

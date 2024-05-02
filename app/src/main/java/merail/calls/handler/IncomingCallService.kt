@@ -20,12 +20,7 @@ class IncomingCallService : CallScreeningService() {
                     else -> incomingCallAlert.showWindow(this, callDetails.handle.schemeSpecificPart)
                 }
             }
-            val callResponse = CallResponse.Builder()
-                .setDisallowCall(false)
-                .setRejectCall(false)
-                .setSkipCallLog(false)
-                .setSkipNotification(false)
-                .build()
+            respondToCall(callDetails, CallResponse.Builder().build())
         }
     }
 }

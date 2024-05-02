@@ -83,6 +83,13 @@ class IncomingCallAlert {
         }
     }
 
+    fun closeWindow() {
+        if (windowLayout != null) {
+            windowManager.removeView(windowLayout)
+            windowLayout = null
+        }
+    }
+
     @SuppressLint("ClickableViewAccessibility")
     private fun setOnTouchListener() {
         windowLayout?.setOnTouchListener { view: View, event: MotionEvent ->
@@ -105,12 +112,5 @@ class IncomingCallAlert {
         windowManager.updateViewLayout(windowLayout, params)
         x = event.rawX
         y = event.rawY
-    }
-
-    private fun closeWindow() {
-        if (windowLayout != null) {
-            windowManager.removeView(windowLayout)
-            windowLayout = null
-        }
     }
 }

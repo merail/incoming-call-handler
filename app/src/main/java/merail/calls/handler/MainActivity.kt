@@ -1,15 +1,11 @@
 package merail.calls.handler
 
 import android.Manifest
-import android.app.Activity
 import android.app.role.RoleManager
-import android.content.Context
 import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -36,25 +32,41 @@ import merail.tools.permissions.runtime.RuntimePermissionRequester
 import merail.tools.permissions.runtime.RuntimePermissionState
 import merail.tools.permissions.special.SpecialPermissionRequester
 import merail.calls.handler.ui.theme.Typography
+import merail.tools.permissions.role.RoleRequester
+import merail.tools.permissions.role.RoleState
+import merail.tools.permissions.special.SpecialPermissionState
 
 class MainActivity : ComponentActivity() {
 
     private lateinit var specialPermissionRequester: SpecialPermissionRequester
     private lateinit var runtimePermissionRequester: RuntimePermissionRequester
+    private lateinit var roleRequester: RoleRequester
 
-    private val runtimePermissions = arrayOf(
-        Manifest.permission.READ_PHONE_STATE,
-        Manifest.permission.READ_CONTACTS,
-        Manifest.permission.READ_CALL_LOG,
-    )
+    private val specialPermission = Manifest.permission.SYSTEM_ALERT_WINDOW
 
+    private val runtimePermissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        arrayOf(
+            Manifest.permission.READ_PHONE_STATE,
+            Manifest.permission.READ_CONTACTS,
+            Manifest.permission.READ_CALL_LOG,
+        )
+    } else {
+        arrayOf(
+            Manifest.permission.READ_PHONE_STATE,
+            Manifest.permission.READ_CALL_LOG,
+        )
+    }
+
+    @RequiresApi(Build.VERSION_CODES.Q)
+    private val rolePermission = RoleManager.ROLE_CALL_SCREENING
 
     private lateinit var isSpecialPermissionButtonVisible: MutableState<Boolean>
     private lateinit var isRuntimePermissionsButtonVisible: MutableState<Boolean>
+    private lateinit var rolePermissionButtonVisible: MutableState<Boolean>
 
     private val onSpecialPermissionClick = {
         specialPermissionRequester.requestPermission {
-            isSpecialPermissionButtonVisible.value = it.second.not()
+            isSpecialPermissionButtonVisible.value = it.second == SpecialPermissionState.DENIED
         }
     }
     private val onRuntimePermissionsClick = {
@@ -72,6 +84,12 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+    @RequiresApi(Build.VERSION_CODES.Q)
+    private val rolePermissionClick = {
+        roleRequester.requestRole {
+            rolePermissionButtonVisible.value = it.second == RoleState.DENIED
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -82,41 +100,17 @@ class MainActivity : ComponentActivity() {
 
         specialPermissionRequester = SpecialPermissionRequester(
             activity = this,
-            requestedPermission = Manifest.permission.SYSTEM_ALERT_WINDOW,
+            requestedPermission = specialPermission,
         )
         runtimePermissionRequester = RuntimePermissionRequester(
             activity = this,
             requestedPermissions = runtimePermissions,
         )
-
-        if (!specialPermissionRequester.isPermissionGranted()) {
-            onSpecialPermissionClick.invoke()
-        }
-        if (!runtimePermissionRequester.areAllPermissionsGranted()) {
-            onRuntimePermissionsClick.invoke()
-        }
-
-        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) {
-            requestScreeningRole()
-        }
-    }
-
-    @RequiresApi(Build.VERSION_CODES.Q)
-    private fun requestScreeningRole(){
-        val roleManager = getSystemService(Context.ROLE_SERVICE) as RoleManager
-        val isRoleCallScreeningHeld = roleManager.isRoleHeld(RoleManager.ROLE_CALL_SCREENING)
-        if(!isRoleCallScreeningHeld){
-            val intent = roleManager.createRequestRoleIntent(RoleManager.ROLE_CALL_SCREENING)
-            val resultLauncher = registerForActivityResult(
-                ActivityResultContracts.StartActivityForResult()
-            ) {
-                if (it.resultCode == Activity.RESULT_OK) {
-                    Log.d("ScreeningRoleRequest", "Permission is granted")
-                } else {
-                    Log.d("ScreeningRoleRequest", "Permission is denied")
-                }
-            }
-            resultLauncher.launch(intent)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            roleRequester = RoleRequester(
+                activity = this,
+                requestedRole = rolePermission,
+            )
         }
     }
 
@@ -153,6 +147,21 @@ class MainActivity : ComponentActivity() {
                     text = "Get runtime permissions",
                     isVisible = isRuntimePermissionsButtonVisible.value,
                 )
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    rolePermissionButtonVisible = remember {
+                        mutableStateOf(
+                            roleRequester.isRoleGranted().not()
+                        )
+                    }
+                    Button(
+                        onClick = {
+                            rolePermissionClick.invoke()
+                        },
+                        text = "Get role permissions",
+                        isVisible = rolePermissionButtonVisible.value,
+                    )
+                }
             }
         }
     }
@@ -205,6 +214,12 @@ class MainActivity : ComponentActivity() {
             Button(
                 onClick = { },
                 text = "Get runtime permissions",
+                isVisible = true,
+            )
+
+            Button(
+                onClick = { },
+                text = "Get call role permissions",
                 isVisible = true,
             )
         }

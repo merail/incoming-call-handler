@@ -219,7 +219,7 @@ class MainActivity : ComponentActivity() {
 
             Button(
                 onClick = { },
-                text = "Get call role permissions",
+                text = "Get role permissions",
                 isVisible = true,
             )
         }

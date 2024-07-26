@@ -7,11 +7,13 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Looper
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -27,10 +29,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
@@ -42,7 +46,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -60,7 +66,10 @@ import merail.tools.permissions.special.SpecialPermissionRequester
 import merail.tools.permissions.special.SpecialPermissionState
 import org.json.JSONObject
 import java.io.BufferedReader
+import java.io.IOException
 import java.io.InputStreamReader
+import java.net.URL
+import javax.net.ssl.HttpsURLConnection
 
 class MainActivity : ComponentActivity() {
 
@@ -92,7 +101,13 @@ class MainActivity : ComponentActivity() {
     private lateinit var rolePermissionButtonVisible: MutableState<Boolean>
     private lateinit var addedNumbersCount: MutableState<Int>;
     private lateinit var logContents: MutableState<String>;
-    private lateinit var dialogOpen: MutableState<Boolean>;
+    private var dialogOpen = mutableStateOf(true) ;
+    private var fileUrl = mutableStateOf("")
+    private var updateAutomatically = mutableStateOf(false)
+    private var updateFrequency = mutableStateOf("1")
+    private var fileDownloadInProgress = mutableStateOf(false)
+
+    //    Call handling
 
     private val onSpecialPermissionClick = {
         specialPermissionRequester.requestPermission {
@@ -101,7 +116,8 @@ class MainActivity : ComponentActivity() {
     }
     private val onRuntimePermissionsClick = {
         runtimePermissionRequester.requestPermissions {
-            isRuntimePermissionsButtonVisible.value = runtimePermissionRequester.areAllPermissionsGranted().not()
+            isRuntimePermissionsButtonVisible.value =
+                runtimePermissionRequester.areAllPermissionsGranted().not()
             if (it.containsValue(RuntimePermissionState.PERMANENTLY_DENIED)) {
                 val settingsOpeningSnackbar = SettingsSnackbar(
                     activity = this,
@@ -114,6 +130,7 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
     @RequiresApi(Build.VERSION_CODES.Q)
     private val rolePermissionClick = {
         roleRequester.requestRole {
@@ -160,6 +177,9 @@ class MainActivity : ComponentActivity() {
                     mutableStateOf("")
                 }
                 dialogOpen = remember { mutableStateOf(false) }
+                fileUrl = remember {
+                    mutableStateOf("")
+                }
                 isSpecialPermissionButtonVisible = remember {
                     mutableStateOf(
                         specialPermissionRequester.isPermissionGranted().not()
@@ -218,13 +238,15 @@ class MainActivity : ComponentActivity() {
                         text = "Toggle log",
                         isVisible = true
                     )
-                    Text("Currently, there are " + addedNumbersCount.value + " imported numbers",
+                    Text(
+                        "Currently, there are " + addedNumbersCount.value + " imported numbers",
                         Modifier
                             .fillMaxWidth()
                             .defaultMinSize(
                                 minWidth = 72.dp,
                             )
-                            .padding(8.dp))
+                            .padding(8.dp)
+                    )
                     Text(
                         text = logContents.value,
                         style = Typography.titleSmall,
@@ -324,6 +346,8 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun importFromUrl() {
+        fileUrl.value = "";
+        dialogOpen.value = true
     }
 
     private fun toggleLog() {
@@ -367,13 +391,17 @@ class MainActivity : ComponentActivity() {
             val filename = "numbers_list"
             applicationContext.openFileOutput(filename, Context.MODE_PRIVATE).use {
                 it.write(stringBuilder.toString().toByteArray());
-                text = text + " finished in " + (System.currentTimeMillis() - performanceMarkStart) + "ms, got " + numbersArrayLen + " numbers"
-                System.out.println( " finished in " + (System.currentTimeMillis() - performanceMarkStart) + "ms, got " + numbersArrayLen + " numbers");
+                text =
+                    text + " finished in " + (System.currentTimeMillis() - performanceMarkStart) + "ms, got " + numbersArrayLen + " numbers"
+                System.out.println(" finished in " + (System.currentTimeMillis() - performanceMarkStart) + "ms, got " + numbersArrayLen + " numbers");
             }
 
             System.out.println("file saved");
 
-            logger.saveToLog(applicationContext, "Loaded " + numbersArrayLen + " numbers from " + uri);
+            logger.saveToLog(
+                applicationContext,
+                "Loaded " + numbersArrayLen + " numbers from " + uri
+            );
 
             // Read the numbers list
 //            applicationContext.openFileInput(filename).use {
@@ -422,7 +450,7 @@ class MainActivity : ComponentActivity() {
                             .padding(8.dp),
                         shape = RoundedCornerShape(4.dp),
                     ) {
-                        Column (
+                        Column(
                             Modifier.fillMaxHeight(),
                             verticalArrangement = Arrangement.SpaceBetween
                         ) {
@@ -449,22 +477,56 @@ class MainActivity : ComponentActivity() {
                                 SimpleFilledTextFieldSample()
                             }
 
+                            AutoUpdateCheckbox()
+
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth(),
                                 horizontalArrangement = Arrangement.Center
                             ) {
                                 TextButton(
-                                    onClick = {  },
+                                    onClick = { dialogOpen.value = false },
                                     modifier = Modifier.padding(8.dp),
                                 ) {
                                     Text("Dismiss")
                                 }
-                                TextButton(
-                                    onClick = {  },
-                                    modifier = Modifier.padding(8.dp),
-                                ) {
-                                    Text("Confirm")
+                                when {
+                                    !fileDownloadInProgress.value -> {
+                                        TextButton(
+                                            onClick = {
+                                                fileDownloadInProgress.value = true
+                                                Thread {
+                                                    try {
+                                                        val url = URL(fileUrl.value)
+                                                        val uc: HttpsURLConnection = url.openConnection() as HttpsURLConnection
+                                                        val br = BufferedReader(InputStreamReader(uc.getInputStream()))
+                                                        var line: String?
+                                                        val lin2 = StringBuilder()
+                                                        while (br.readLine().also { line = it } != null) {
+                                                            lin2.append(line)
+                                                        }
+                                                        System.out.println(lin2)
+                                                        Looper.prepare()
+                                                        showToast("Imported file from " + fileUrl.value);
+                                                    } catch (e: IOException) {
+                                                        Looper.prepare()
+                                                        showToast("Error occurred while fetching a file from " + fileUrl.value);
+                                                    } finally {
+                                                        dialogOpen.value = false
+                                                        fileDownloadInProgress.vgitkalue = false
+                                                    }
+                                                }.start()
+                                            },
+                                            modifier = Modifier.padding(8.dp),
+                                        ) {
+                                            Text("Confirm")
+                                        }
+                                    }
+                                    fileDownloadInProgress.value -> {
+                                        TextButton(modifier = Modifier.alpha(0.5F).padding(8.dp), onClick = {}) {
+                                            Text("Confirm")
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -477,12 +539,45 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    fun SimpleFilledTextFieldSample() {
-        var text by remember { mutableStateOf("") }
+    fun AutoUpdateCheckbox() {
+        Row(
+            verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 0.dp)
+        ) {
+            Checkbox(
+                checked = updateAutomatically.value,
+                onCheckedChange = { updateAutomatically.value = it }
+            )
+            Text(
+                "Update automatically"
+            )
+        }
+        when {
+            updateAutomatically.value -> {
+                Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.padding(top = 0.dp, start = 12.dp)) {
+                    Text(
+                        "Update frequency:"
+                    )
+                    TextField(
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        value = updateFrequency.value,
+                        onValueChange = { updateFrequency.value = it },
+                        label = { Text("") },
+                        modifier = Modifier.width(100.dp).padding(start = 8.dp, end = 8.dp).align(alignment = Alignment.Top).height(50.dp)
+                    )
+                    Text(
+                        "day(s)"
+                    )
+                }
+            }
+        }
+    }
 
+
+    @Composable
+    fun SimpleFilledTextFieldSample() {
         TextField(
-            value = text,
-            onValueChange = { text = it },
+            value = fileUrl.value,
+            onValueChange = { fileUrl.value = it },
             label = { Text("") }
         )
     }

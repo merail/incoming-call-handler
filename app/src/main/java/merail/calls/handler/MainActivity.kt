@@ -513,7 +513,7 @@ class MainActivity : ComponentActivity() {
                                                         showToast("Error occurred while fetching a file from " + fileUrl.value);
                                                     } finally {
                                                         dialogOpen.value = false
-                                                        fileDownloadInProgress.vgitkalue = false
+                                                        fileDownloadInProgress.value = false
                                                     }
                                                 }.start()
                                             },

@@ -8,6 +8,7 @@ import android.telecom.CallScreeningService
 import android.telephony.TelephonyManager
 import androidx.annotation.RequiresApi
 import com.google.firebase.crashlytics.buildtools.reloc.org.apache.commons.io.IOUtils
+import org.json.JSONArray
 import org.json.JSONObject
 
 
@@ -18,7 +19,13 @@ class IncomingCallService : CallScreeningService() {
         @SuppressLint("StaticFieldLeak")
         private val incomingCallAlert = IncomingCallAlert()
 
-        private var numbersList = arrayOf("abcde", "blabla");
+        private val countryCodesHelper = CountryCodes();
+
+        private lateinit var numbersDb: JSONArray;
+
+        private var loadedDbVersion = "";
+
+        private val preferenceHelper = PreferenceHelper();
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -27,29 +34,32 @@ class IncomingCallService : CallScreeningService() {
     }
 
     override fun onScreenCall(callDetails: Call.Details) {
-        System.out.println("onscreenscall");
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val stringBuilder = StringBuilder()
-            try {
-                applicationContext.openFileInput("numbers_list").use {
-                    val timeStart = System.currentTimeMillis();
-                    val myString: String = IOUtils.toString(it, "UTF-8");
-                    val jsonObj = JSONObject(myString);
-                    val numbersArray = jsonObj.getJSONArray("numbers")
-                    val tm = this.getSystemService(TELEPHONY_SERVICE) as TelephonyManager
-                    val countryCodeValue = tm.networkCountryIso
-                    System.out.println("country code is " + countryCodeValue)
+        if (callDetails.callDirection == Call.Details.DIRECTION_INCOMING || true) {
+            val phoneNumber = callDetails.handle.schemeSpecificPart
+            phoneNumber?.let {
+                incomingCallAlert.showWindow(this, it)
+            }
 
-                    System.out.println(callDetails.gatewayInfo);
-                    System.out.println(callDetails.handle.toString());
-                    System.out.println(callDetails.handle.schemeSpecificPart.toString() +" is calling " + numbersArray.length() + " loaded in " + (System.currentTimeMillis() - timeStart).toString())
+            val savedDbVersion = preferenceHelper.getPreference(applicationContext, "saved_db_timestamp_pref");
 
-                    if (callDetails.callDirection == Call.Details.DIRECTION_INCOMING) {
-                        val phoneNumber = callDetails.handle.schemeSpecificPart
-                        phoneNumber?.let {
-                            incomingCallAlert.showWindow(this, it)
-                        }
-                        OperationLogger().saveToLog(applicationContext, "Incoming call from " + phoneNumber);
+            if (loadedDbVersion !== savedDbVersion) {
+                    //                Let's load the DB first
+                try {
+                    applicationContext.openFileInput("numbers_list").use {
+                        loadedDbVersion = savedDbVersion!!;
+                        val myString: String = IOUtils.toString(it, "UTF-8");
+                        val jsonObj = JSONObject(myString);
+                        val numbersArray = jsonObj.getJSONArray("numbers")
+                        numbersDb = numbersArray
+                        val countryCodeValue = (this.getSystemService(TELEPHONY_SERVICE) as TelephonyManager).networkCountryIso
+                        val countryPrefix = "+" + countryCodesHelper.getCode(countryCodeValue.uppercase())
+                    }
+                } catch (e: Exception) {
+
+                }
+            }
+
+            OperationLogger().saveToLog(applicationContext, "Incoming call from " + phoneNumber);
 //                    val response = CallResponse.Builder()
 //                        // Sets whether the incoming call should be blocked.
 //                        .setDisallowCall(true)
@@ -65,25 +75,9 @@ class IncomingCallService : CallScreeningService() {
 //
 //                    respondToCall(callDetails, response)
 
-                    } else {
-                        System.out.println("here, right?")
+//                        Handle in default dialer
+            respondToCall(callDetails, CallResponse.Builder().build())
 
-                        System.out.println("dupax " + numbersList.size)
-                        numbersList = arrayOf("keke");
-//                    System.out.println("numbersList " + Arrays.toString(numbersList) + " " + numbersList.size);
-//                    val response = CallResponse.Builder()
-//                        // Sets whether the incoming call should be blocked.
-//                        .setDisallowCall(true)
-//                        .setRejectCall(true)
-//                        .build()
-//
-//                    respondToCall(callDetails, response)
-                    }
-//                respondToCall(callDetails, CallResponse.Builder().build())
-                }
-            } catch (e: Exception) {
-
-            }
         }
     }
 }

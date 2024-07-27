@@ -9,7 +9,7 @@ android {
 
     defaultConfig {
         applicationId = "merail.calls.handler"
-        minSdk = 21
+        minSdk = 29
         targetSdk = 34
     }
 
@@ -42,4 +42,5 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("com.github.merail:request-permissions-tool:1.1.0")
     implementation("com.google.firebase:firebase-crashlytics-buildtools:3.0.2")
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
 }

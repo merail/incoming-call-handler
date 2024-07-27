@@ -1,3 +1,6 @@
 <resources>
     <string name="app_name">incoming-call-handler</string>
+    <string name="shared_preference_file_url">automatic_update_file_url</string>
+    <string name="saved_db_timestamp_pref">saved_db_timestamp</string>
+    <string name="auto_update_job_tag">blocked_numbers_list_update</string>
 </resources>

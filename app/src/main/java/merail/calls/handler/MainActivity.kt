@@ -1,19 +1,17 @@
 package merail.calls.handler
 
 import android.Manifest
+import android.app.PendingIntent.getActivity
 import android.app.role.RoleManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.os.Looper
+import android.preference.PreferenceManager
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.annotation.RequiresApi
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -24,7 +22,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeContentPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.rememberScrollState
@@ -40,23 +37,24 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
 import merail.calls.handler.ui.theme.IncomingCallHandlerTheme
 import merail.calls.handler.ui.theme.Typography
+import merail.calls.handler.workers.UpdateDatabaseWorker
+import merail.calls.handler.workers.UpdateDatabaseWorker.Companion
 import merail.tools.permissions.SettingsSnackbar
 import merail.tools.permissions.role.RoleRequester
 import merail.tools.permissions.role.RoleState
@@ -69,31 +67,28 @@ import java.io.BufferedReader
 import java.io.IOException
 import java.io.InputStreamReader
 import java.net.URL
+import java.util.concurrent.TimeUnit
 import javax.net.ssl.HttpsURLConnection
+
 
 class MainActivity : ComponentActivity() {
 
     private lateinit var specialPermissionRequester: SpecialPermissionRequester
     private lateinit var runtimePermissionRequester: RuntimePermissionRequester
     private lateinit var roleRequester: RoleRequester
-    private var logger = OperationLogger();
+    private val logger = OperationLogger();
+    private val preferenceHelper = PreferenceHelper();
+    private val databaseUpdater = UpdateDatabase();
 
     private val specialPermission = Manifest.permission.SYSTEM_ALERT_WINDOW
 
-    private val runtimePermissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+    private val runtimePermissions =
         arrayOf(
             Manifest.permission.READ_PHONE_STATE,
             Manifest.permission.READ_CONTACTS,
             Manifest.permission.READ_CALL_LOG,
         )
-    } else {
-        arrayOf(
-            Manifest.permission.READ_PHONE_STATE,
-            Manifest.permission.READ_CALL_LOG,
-        )
-    }
 
-    @RequiresApi(Build.VERSION_CODES.Q)
     private val rolePermission = RoleManager.ROLE_CALL_SCREENING
 
     private lateinit var isSpecialPermissionButtonVisible: MutableState<Boolean>
@@ -101,7 +96,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var rolePermissionButtonVisible: MutableState<Boolean>
     private lateinit var addedNumbersCount: MutableState<Int>;
     private lateinit var logContents: MutableState<String>;
-    private var dialogOpen = mutableStateOf(true) ;
+    private var dialogOpen = mutableStateOf(false) ;
     private var fileUrl = mutableStateOf("")
     private var updateAutomatically = mutableStateOf(false)
     private var updateFrequency = mutableStateOf("1")
@@ -131,7 +126,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.Q)
     private val rolePermissionClick = {
         roleRequester.requestRole {
             rolePermissionButtonVisible.value = it.second == RoleState.DENIED
@@ -153,12 +147,14 @@ class MainActivity : ComponentActivity() {
             activity = this,
             requestedPermissions = runtimePermissions,
         )
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            roleRequester = RoleRequester(
-                activity = this,
-                requestedRole = rolePermission,
-            )
-        }
+        roleRequester = RoleRequester(
+            activity = this,
+            requestedRole = rolePermission,
+        )
+
+//        val sharedPreference =  getPreferences(Context.MODE_PRIVATE);
+//        val fileUrl = sharedPreference.getString(getString(R.string.shared_preference_file_url), "");
+//        System.out.println("file url is " + fileUrl);
     }
 
     @Composable
@@ -169,10 +165,19 @@ class MainActivity : ComponentActivity() {
                 modifier = Modifier
                     .fillMaxSize(),
             ) {
-//                val shared = getSharedPreferences("blocked-numbers", MODE_PRIVATE);
+                addedNumbersCount = remember { mutableStateOf(0) }
+                Text(
+                    "Welcome to the call blocker app.\nCurrently there are " + addedNumbersCount.value + " imported numbers.",
+                    Modifier
+                        .fillMaxWidth()
+                        .defaultMinSize(
+                            minWidth = 72.dp,
+                        )
+                        .padding(8.dp)
+                )
+//                val shared = Preferences("blocked-numbers", MODE_PRIVATE);
 //                System.out.println("here" + shared.toString());
 
-                addedNumbersCount = remember { mutableStateOf(0) }
                 logContents = remember {
                     mutableStateOf("")
                 }
@@ -180,33 +185,7 @@ class MainActivity : ComponentActivity() {
                 fileUrl = remember {
                     mutableStateOf("")
                 }
-                isSpecialPermissionButtonVisible = remember {
-                    mutableStateOf(
-                        specialPermissionRequester.isPermissionGranted().not()
-                    )
-                }
-                Button(
-                    onClick = {
-                        onSpecialPermissionClick.invoke()
-                    },
-                    text = "Get special permission",
-                    isVisible = isSpecialPermissionButtonVisible.value,
-                )
 
-                isRuntimePermissionsButtonVisible = remember {
-                    mutableStateOf(
-                        runtimePermissionRequester.areAllPermissionsGranted().not()
-                    )
-                }
-                Button(
-                    onClick = {
-                        onRuntimePermissionsClick.invoke()
-                    },
-                    text = "Get runtime permissions",
-                    isVisible = isRuntimePermissionsButtonVisible.value,
-                )
-
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     rolePermissionButtonVisible = remember {
                         mutableStateOf(
                             roleRequester.isRoleGranted().not()
@@ -218,6 +197,30 @@ class MainActivity : ComponentActivity() {
                         },
                         text = "Get role permissions",
                         isVisible = rolePermissionButtonVisible.value,
+                    )
+                    isRuntimePermissionsButtonVisible = remember {
+                        mutableStateOf(
+                            runtimePermissionRequester.areAllPermissionsGranted().not()
+                        )
+                    }
+                    Button(
+                        onClick = {
+                            onRuntimePermissionsClick.invoke()
+                        },
+                        text = "Get runtime permissions",
+                        isVisible = isRuntimePermissionsButtonVisible.value,
+                    )
+                    isSpecialPermissionButtonVisible = remember {
+                        mutableStateOf(
+                            specialPermissionRequester.isPermissionGranted().not()
+                        )
+                    }
+                    Button(
+                        onClick = {
+                            onSpecialPermissionClick.invoke()
+                        },
+                        text = "Get special permission",
+                        isVisible = isSpecialPermissionButtonVisible.value,
                     )
                     Button(
                         onClick = {
@@ -235,17 +238,13 @@ class MainActivity : ComponentActivity() {
                     )
                     Button(
                         onClick = { toggleLog() },
-                        text = "Toggle log",
+                        text = "Show/hide log",
                         isVisible = true
                     )
-                    Text(
-                        "Currently, there are " + addedNumbersCount.value + " imported numbers",
-                        Modifier
-                            .fillMaxWidth()
-                            .defaultMinSize(
-                                minWidth = 72.dp,
-                            )
-                            .padding(8.dp)
+                    Button(
+                        onClick = { logger.clearLog(applicationContext); logContents.value = ""; },
+                        text = "Clear log permanently",
+                        isVisible = true
                     )
                     Text(
                         text = logContents.value,
@@ -257,7 +256,6 @@ class MainActivity : ComponentActivity() {
                             )
                     )
                     FileUrlDialog()
-                }
             }
         }
     }
@@ -321,7 +319,12 @@ class MainActivity : ComponentActivity() {
             )
             Button(
                 onClick = { },
-                text = "Toggle log",
+                text = "Show/hide log",
+                isVisible = true
+            )
+            Button(
+                onClick = { logger.clearLog(applicationContext); logContents.value = ""; },
+                text = "Clear log permanently",
                 isVisible = true
             )
             Text(
@@ -402,6 +405,8 @@ class MainActivity : ComponentActivity() {
                 applicationContext,
                 "Loaded " + numbersArrayLen + " numbers from " + uri
             );
+
+            preferenceHelper.setPreference(applicationContext, "saved_db_timestamp_pref", System.currentTimeMillis().toString())
 
             // Read the numbers list
 //            applicationContext.openFileInput(filename).use {
@@ -494,20 +499,21 @@ class MainActivity : ComponentActivity() {
                                     !fileDownloadInProgress.value -> {
                                         TextButton(
                                             onClick = {
+                                                if (updateAutomatically.value) {
+                                                    //                                                    Schedule auto update job
+                                                    preferenceHelper.setPreference(applicationContext, getString(R.string.shared_preference_file_url), fileUrl.value);
+                                                    //        Remove previous jobs first
+                                                    WorkManager.getInstance().cancelAllWorkByTag(getString(R.string.auto_update_job_tag))
+                                                    val saveRequest = PeriodicWorkRequestBuilder<UpdateDatabaseWorker>(15, TimeUnit.MINUTES)
+                                                        // Additional configuration
+                                                        .build()
+
+                                                }
+
                                                 fileDownloadInProgress.value = true
                                                 Thread {
                                                     try {
-                                                        val url = URL(fileUrl.value)
-                                                        val uc: HttpsURLConnection = url.openConnection() as HttpsURLConnection
-                                                        val br = BufferedReader(InputStreamReader(uc.getInputStream()))
-                                                        var line: String?
-                                                        val lin2 = StringBuilder()
-                                                        while (br.readLine().also { line = it } != null) {
-                                                            lin2.append(line)
-                                                        }
-                                                        System.out.println(lin2)
-                                                        Looper.prepare()
-                                                        showToast("Imported file from " + fileUrl.value);
+                                                        databaseUpdater.updateDatabase(applicationContext, fileUrl.value);
                                                     } catch (e: IOException) {
                                                         Looper.prepare()
                                                         showToast("Error occurred while fetching a file from " + fileUrl.value);
@@ -523,7 +529,9 @@ class MainActivity : ComponentActivity() {
                                         }
                                     }
                                     fileDownloadInProgress.value -> {
-                                        TextButton(modifier = Modifier.alpha(0.5F).padding(8.dp), onClick = {}) {
+                                        TextButton(modifier = Modifier
+                                            .alpha(0.5F)
+                                            .padding(8.dp), onClick = {}) {
                                             Text("Confirm")
                                         }
                                     }
@@ -562,7 +570,11 @@ class MainActivity : ComponentActivity() {
                         value = updateFrequency.value,
                         onValueChange = { updateFrequency.value = it },
                         label = { Text("") },
-                        modifier = Modifier.width(100.dp).padding(start = 8.dp, end = 8.dp).align(alignment = Alignment.Top).height(50.dp)
+                        modifier = Modifier
+                            .width(100.dp)
+                            .padding(start = 8.dp, end = 8.dp)
+                            .align(alignment = Alignment.Top)
+                            .height(50.dp)
                     )
                     Text(
                         "day(s)"

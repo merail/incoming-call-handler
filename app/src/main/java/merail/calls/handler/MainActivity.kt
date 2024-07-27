@@ -1,14 +1,13 @@
 package merail.calls.handler
 
 import android.Manifest
-import android.app.PendingIntent.getActivity
 import android.app.role.RoleManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.os.Looper
-import android.preference.PreferenceManager
+import android.util.JsonReader
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -54,7 +53,6 @@ import androidx.work.WorkManager
 import merail.calls.handler.ui.theme.IncomingCallHandlerTheme
 import merail.calls.handler.ui.theme.Typography
 import merail.calls.handler.workers.UpdateDatabaseWorker
-import merail.calls.handler.workers.UpdateDatabaseWorker.Companion
 import merail.tools.permissions.SettingsSnackbar
 import merail.tools.permissions.role.RoleRequester
 import merail.tools.permissions.role.RoleState
@@ -66,9 +64,7 @@ import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.IOException
 import java.io.InputStreamReader
-import java.net.URL
 import java.util.concurrent.TimeUnit
-import javax.net.ssl.HttpsURLConnection
 
 
 class MainActivity : ComponentActivity() {
@@ -375,15 +371,34 @@ class MainActivity : ComponentActivity() {
             val stringBuilder = StringBuilder()
             contentResolver.openInputStream(uri)?.use { inputStream ->
                 BufferedReader(InputStreamReader(inputStream)).use { reader ->
-                    var line: String? = reader.readLine()
-                    while (line != null) {
-                        stringBuilder.append(line)
-                        line = reader.readLine()
+                    val numbersArray: MutableList<Object> = ArrayList();
+
+                    val jsonReader = JsonReader(reader);
+                    jsonReader.beginArray();
+
+                    while (jsonReader.hasNext()) {
+//                        numbersArray.add()
                     }
+
+                    jsonReader.endArray();
+
+
+                    System.out.println("numbersArray " + numbersArray);
+
+
+//                    var line: String? = reader.readLine()
+//                    while (line != null) {
+//                        stringBuilder.append(line)
+//                        line = reader.readLine()
+//                    }
                 }
             }
 
-//            txtResult.text = "Path:" + path + "\nFile name:" + file.getName() + " " + file.exists() + stringBuilder.toString();
+//            val jfactory: JsonFactory = JsonFactory()
+//            val jParser: JsonParser = jfactory.createParser(stringBuilder.toString())
+
+
+
             val jsonObj = JSONObject(stringBuilder.toString());
             val numbersArray = jsonObj.getJSONArray("numbers")
             val numbersArrayLen = numbersArray.length()
@@ -428,17 +443,6 @@ class MainActivity : ComponentActivity() {
 //                }
 //            }
 
-
-            val dbVersionFilename = "db_version"
-            // Read current db version
-//            try {
-//                applicationContext.openFileInput(dbVersionFilename).use {
-//                    val dbVersion: String = IOUtils.toString(it, "UTF-8");
-//                    System.out.println("dupax " + dbVersion)
-//                }
-//            } catch (e: Exception) {
-//
-//            }
         }
         super.onActivityResult(requestCode, resultCode, data)
     }

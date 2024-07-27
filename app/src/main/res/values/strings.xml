@@ -3,4 +3,7 @@
     <string name="shared_preference_file_url">automatic_update_file_url</string>
     <string name="saved_db_timestamp_pref">saved_db_timestamp</string>
     <string name="auto_update_job_tag">blocked_numbers_list_update</string>
+    <string name="call_blocking_block">call_blocking_block</string>
+    <string name="call_blocking_silence">call_blocking_silence</string>
+    <string name="call_blocking_show_window">call_blocking_show_window</string>
 </resources>

@@ -25,18 +25,13 @@ class IncomingCallAlert {
     private var windowLayout: ViewGroup? = null
 
     private var params = WindowManager.LayoutParams(
-        // width
         WindowManager.LayoutParams.WRAP_CONTENT,
-        // height
         WindowManager.LayoutParams.WRAP_CONTENT,
-        // type
         windowType,
-        // flags
         WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
                 WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
                 WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
-        // format
         PixelFormat.TRANSLUCENT,
     ).apply {
         gravity = Gravity.CENTER

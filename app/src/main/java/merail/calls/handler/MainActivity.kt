@@ -50,18 +50,11 @@ class MainActivity : ComponentActivity() {
 
     //--------Permissions--------//
     private val specialPermission = Manifest.permission.SYSTEM_ALERT_WINDOW
-    private val runtimePermissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-        arrayOf(
-            Manifest.permission.READ_PHONE_STATE,
-            Manifest.permission.READ_CONTACTS,
-            Manifest.permission.READ_CALL_LOG,
-        )
-    } else {
-        arrayOf(
-            Manifest.permission.READ_PHONE_STATE,
-            Manifest.permission.READ_CALL_LOG,
-        )
-    }
+    private val runtimePermissions = arrayOf(
+        Manifest.permission.READ_PHONE_STATE,
+        Manifest.permission.READ_CONTACTS,
+    )
+
     @RequiresApi(Build.VERSION_CODES.Q)
     private val rolePermission = RoleManager.ROLE_CALL_SCREENING
     //--------------------------//

@@ -53,6 +53,7 @@ class MainActivity : ComponentActivity() {
     private val runtimePermissions = arrayOf(
         Manifest.permission.READ_PHONE_STATE,
         Manifest.permission.READ_CONTACTS,
+        Manifest.permission.READ_CALL_LOG,
     )
 
     @RequiresApi(Build.VERSION_CODES.Q)

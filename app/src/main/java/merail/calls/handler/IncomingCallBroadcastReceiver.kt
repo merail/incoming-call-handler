@@ -1,19 +1,14 @@
 package merail.calls.handler
 
-import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.telephony.TelephonyManager
 
-
 class IncomingCallBroadcastReceiver : BroadcastReceiver() {
 
-    companion object {
-        @SuppressLint("StaticFieldLeak")
-        private val incomingCallAlert = IncomingCallAlert()
-    }
+    private val incomingCallAlert = IncomingCallAlert()
 
     private val Intent.needToShowWindow: Boolean
         get() = getStringExtra(TelephonyManager.EXTRA_STATE) == TelephonyManager.EXTRA_STATE_RINGING

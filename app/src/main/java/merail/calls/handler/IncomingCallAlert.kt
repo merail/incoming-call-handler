@@ -18,11 +18,11 @@ class IncomingCallAlert {
 
     companion object {
         private const val WINDOW_WIDTH_RATIO = 0.8f
+
+        private var windowManager: WindowManager? = null
+
+        private var windowLayout: ViewGroup? = null
     }
-
-    private lateinit var windowManager: WindowManager
-
-    private var windowLayout: ViewGroup? = null
 
     private var params = WindowManager.LayoutParams(
         WindowManager.LayoutParams.WRAP_CONTENT,
@@ -65,24 +65,27 @@ class IncomingCallAlert {
     fun showWindow(context: Context, phone: String) {
         if (windowLayout == null) {
             windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-            windowLayout = View.inflate(context, R.layout.window_call_info, null) as ViewGroup?
-            windowLayout?.let {
-                params.width = windowManager.windowWidth
-                val numberTextView = it.findViewById<TextView>(R.id.number)
-                numberTextView.text = phone
-                val cancelButton = it.findViewById<Button>(R.id.cancel)
-                cancelButton.setOnClickListener {
-                    closeWindow()
+            windowManager?.let { windowManager ->
+                windowLayout = View.inflate(context, R.layout.window_call_info, null) as ViewGroup?
+                windowLayout?.let { windowLayout ->
+                    params.width = windowManager.windowWidth
+                    val numberTextView = windowLayout.findViewById<TextView>(R.id.number)
+                    numberTextView.text = phone
+                    val cancelButton = windowLayout.findViewById<Button>(R.id.cancel)
+                    cancelButton.setOnClickListener {
+                        closeWindow()
+                    }
+                    windowManager.addView(windowLayout, params)
+                    setOnTouchListener()
                 }
-                windowManager.addView(it, params)
-                setOnTouchListener()
             }
         }
     }
 
     fun closeWindow() {
         if (windowLayout != null) {
-            windowManager.removeView(windowLayout)
+            windowManager?.removeView(windowLayout)
+            windowManager = null
             windowLayout = null
         }
     }
@@ -106,7 +109,7 @@ class IncomingCallAlert {
     private fun updateWindowLayoutParams(event: MotionEvent) {
         params.x -= (x - event.rawX).toInt()
         params.y -= (y - event.rawY).toInt()
-        windowManager.updateViewLayout(windowLayout, params)
+        windowManager?.updateViewLayout(windowLayout, params)
         x = event.rawX
         y = event.rawY
     }

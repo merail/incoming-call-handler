@@ -21,6 +21,7 @@ class IncomingCallAlert {
 
         private var windowManager: WindowManager? = null
 
+        @SuppressLint("StaticFieldLeak")
         private var windowLayout: ViewGroup? = null
     }
 

@@ -11,10 +11,7 @@ import androidx.annotation.RequiresApi
 @RequiresApi(Build.VERSION_CODES.N)
 class IncomingCallService : CallScreeningService() {
 
-    companion object {
-        @SuppressLint("StaticFieldLeak")
-        private val incomingCallAlert = IncomingCallAlert()
-    }
+    private val incomingCallAlert = IncomingCallAlert()
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         incomingCallAlert.closeWindow()

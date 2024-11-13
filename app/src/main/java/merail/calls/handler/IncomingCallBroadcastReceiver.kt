@@ -4,42 +4,75 @@ import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.os.Build
+import android.graphics.PixelFormat
 import android.telephony.TelephonyManager
-
+import android.util.DisplayMetrics
+import android.view.Gravity
+import android.view.View
+import android.view.ViewGroup
+import android.view.WindowManager
+import android.widget.TextView
 
 class IncomingCallBroadcastReceiver : BroadcastReceiver() {
 
     companion object {
+        private var windowManager: WindowManager? = null
+
         @SuppressLint("StaticFieldLeak")
-        private val incomingCallAlert = IncomingCallAlert()
+        private var windowLayout: ViewGroup? = null
     }
-
-    private val Intent.needToShowWindow: Boolean
-        get() = getStringExtra(TelephonyManager.EXTRA_STATE) == TelephonyManager.EXTRA_STATE_RINGING
-
-    private val Intent.needToCloseWindow: Boolean
-        get() = getStringExtra(TelephonyManager.EXTRA_STATE) == TelephonyManager.EXTRA_STATE_IDLE ||
-                getStringExtra(TelephonyManager.EXTRA_STATE) == TelephonyManager.EXTRA_STATE_OFFHOOK
-
-    private val Intent.needToCloseWindowForApiN: Boolean
-        get() = Build.VERSION.SDK_INT > Build.VERSION_CODES.M && needToCloseWindow
 
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action == TelephonyManager.ACTION_PHONE_STATE_CHANGED) {
-            val phoneNumber = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-                intent.getStringExtra(TelephonyManager.EXTRA_INCOMING_NUMBER)
-            } else {
-                null
+            val phoneNumber = intent.getStringExtra(TelephonyManager.EXTRA_INCOMING_NUMBER)
+            if (phoneNumber != null) {
+                if (intent.getStringExtra(TelephonyManager.EXTRA_STATE) == TelephonyManager.EXTRA_STATE_RINGING) {
+                    showWindow(context, phoneNumber)
+                }
+                if (intent.getStringExtra(TelephonyManager.EXTRA_STATE) == TelephonyManager.EXTRA_STATE_IDLE ||
+                    intent.getStringExtra(TelephonyManager.EXTRA_STATE) == TelephonyManager.EXTRA_STATE_OFFHOOK
+                ) {
+                    closeWindow()
+                }
             }
-            when {
-                intent.needToCloseWindowForApiN -> context
-                    .applicationContext
-                    .startService(Intent(context, IncomingCallService::class.java))
-                phoneNumber == null -> Unit
-                intent.needToShowWindow -> incomingCallAlert.showWindow(context, phoneNumber)
-                intent.needToCloseWindow -> incomingCallAlert.closeWindow()
+        }
+    }
+
+    private fun showWindow(context: Context, phone: String) {
+        if (windowLayout == null) {
+            windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+            windowLayout = View.inflate(context, R.layout.window_call_info, null) as ViewGroup?
+            windowLayout?.let {
+                val params = WindowManager.LayoutParams(
+                    WindowManager.LayoutParams.WRAP_CONTENT,
+                    WindowManager.LayoutParams.WRAP_CONTENT,
+                    WindowManager.LayoutParams.TYPE_PHONE,
+                    WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
+                            WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+                            WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON,
+                    PixelFormat.TRANSLUCENT,
+                )
+
+                params.gravity = Gravity.CENTER
+                params.format = 1
+
+                val metrics = DisplayMetrics()
+                windowManager?.defaultDisplay?.getMetrics(metrics)
+                params.width = (0.8 * metrics.widthPixels.toDouble()).toInt()
+
+                val numberTextView = it.findViewById<TextView>(R.id.number)
+                numberTextView.text = phone
+
+                windowManager?.addView(it, params)
             }
+        }
+    }
+
+    private fun closeWindow() {
+        if (windowLayout != null) {
+            windowManager?.removeView(windowLayout)
+            windowManager = null
+            windowLayout = null
         }
     }
 }

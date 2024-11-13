@@ -68,18 +68,20 @@ class IncomingCallAlert {
         }
 
     fun showWindow(context: Context, phone: String) {
-        windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-        windowLayout = View.inflate(context, R.layout.window_call_info, null) as ViewGroup?
-        windowLayout?.let {
-            params.width = windowManager.windowWidth
-            val numberTextView = it.findViewById<TextView>(R.id.number)
-            numberTextView.text = phone
-            val cancelButton = it.findViewById<Button>(R.id.cancel)
-            cancelButton.setOnClickListener {
-                closeWindow()
+        if (windowLayout == null) {
+            windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+            windowLayout = View.inflate(context, R.layout.window_call_info, null) as ViewGroup?
+            windowLayout?.let {
+                params.width = windowManager.windowWidth
+                val numberTextView = it.findViewById<TextView>(R.id.number)
+                numberTextView.text = phone
+                val cancelButton = it.findViewById<Button>(R.id.cancel)
+                cancelButton.setOnClickListener {
+                    closeWindow()
+                }
+                windowManager.addView(it, params)
+                setOnTouchListener()
             }
-            windowManager.addView(it, params)
-            setOnTouchListener()
         }
     }
 

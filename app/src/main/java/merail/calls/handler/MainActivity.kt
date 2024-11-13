@@ -140,12 +140,14 @@ class MainActivity : ComponentActivity() {
                 runtimePermissionRequester.areAllPermissionsGranted().not()
             )
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            rolePermissionButtonVisible = remember {
-                mutableStateOf(
+        rolePermissionButtonVisible = remember {
+            mutableStateOf(
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     roleRequester.isRoleGranted().not()
-                )
-            }
+                } else {
+                    false
+                }
+            )
         }
 
         val areAllPermissionsGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {

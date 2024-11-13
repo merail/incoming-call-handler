@@ -23,20 +23,23 @@
             </intent-filter>
         </activity>
 
-        <receiver android:name=".IncomingCallBroadcastReceiver"
+        <!-- !!! For SDK 21 need to set exported=true !!!-->
+        <receiver
+            android:name=".IncomingCallBroadcastReceiver"
             android:enabled="true"
             android:exported="false">
             <intent-filter>
-                <action android:name="android.intent.action.PHONE_STATE"/>
+                <action android:name="android.intent.action.PHONE_STATE" />
             </intent-filter>
         </receiver>
 
-        <service android:name=".IncomingCallService"
+        <service
+            android:name=".IncomingCallService"
             android:enabled="true"
             android:exported="false"
             android:permission="android.permission.BIND_SCREENING_SERVICE">
             <intent-filter>
-                <action android:name="android.telecom.CallScreeningService"/>
+                <action android:name="android.telecom.CallScreeningService" />
             </intent-filter>
         </service>
     </application>

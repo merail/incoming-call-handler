@@ -11,7 +11,7 @@ android {
     defaultConfig {
         applicationId = "merail.calls.handler"
         minSdk = 21
-        targetSdk = 29
+        targetSdk = 30
     }
 
     compileOptions {

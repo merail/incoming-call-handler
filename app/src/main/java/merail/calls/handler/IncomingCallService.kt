@@ -11,6 +11,7 @@ import android.util.DisplayMetrics
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowInsets
 import android.view.WindowManager
 import android.widget.TextView
 import androidx.annotation.RequiresApi
@@ -65,9 +66,19 @@ class IncomingCallService : CallScreeningService() {
             params.gravity = Gravity.CENTER
             params.format = 1
 
-            val metrics = DisplayMetrics()
-            windowManager?.defaultDisplay?.getMetrics(metrics)
-            params.width = (0.8 * metrics.widthPixels.toDouble()).toInt()
+            params.width = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                val windowMetrics = windowManager?.currentWindowMetrics
+                val insets = windowMetrics?.getWindowInsets()?.getInsetsIgnoringVisibility(WindowInsets.Type.systemBars())
+                if (windowMetrics != null && insets != null) {
+                    (0.8 * (windowMetrics.bounds.width() - insets.left - insets.right)).toInt()
+                } else {
+                    params.width
+                }
+            } else {
+                val metrics = DisplayMetrics()
+                windowManager?.defaultDisplay?.getMetrics(metrics)
+                (0.8 * metrics.widthPixels.toDouble()).toInt()
+            }
 
             val numberTextView = it.findViewById<TextView>(R.id.number)
             numberTextView.text = phone

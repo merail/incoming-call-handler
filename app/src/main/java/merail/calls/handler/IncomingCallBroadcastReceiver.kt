@@ -5,6 +5,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.graphics.PixelFormat
+import android.os.Build
 import android.telephony.TelephonyManager
 import android.util.DisplayMetrics
 import android.view.Gravity
@@ -46,7 +47,11 @@ class IncomingCallBroadcastReceiver : BroadcastReceiver() {
                 val params = WindowManager.LayoutParams(
                     WindowManager.LayoutParams.WRAP_CONTENT,
                     WindowManager.LayoutParams.WRAP_CONTENT,
-                    WindowManager.LayoutParams.TYPE_PHONE,
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+                    } else {
+                        WindowManager.LayoutParams.TYPE_PHONE
+                    },
                     WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
                             WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
                             WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON,

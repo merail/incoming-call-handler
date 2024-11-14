@@ -26,4 +26,4 @@ Handling of incoming calls will also work when the application is closed and aft
 **Note**: Android Marshmellow may have problems with handling due to security policy.
 
 
-https://github.com/user-attachments/assets/bd158102-14ce-493a-8ca8-f4eff83f3551
+https://github.com/user-attachments/assets/5d2454f2-97ac-4b5f-9ed6-fcdbe15c2e72

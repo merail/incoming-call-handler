@@ -1,6 +1,8 @@
 package merail.calls.handler
 
 import android.Manifest
+import android.app.role.RoleManager
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -30,6 +32,11 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 
 class MainActivity : ComponentActivity() {
+
+    val roleLauncher = registerForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult(),
+        callback = {},
+    )
 
     val runtimePermissionsLauncher = registerForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions(),
@@ -61,7 +68,8 @@ private fun MainActivity.Content() {
         modifier = Modifier
             .fillMaxSize(),
     ) {
-        if (isSpecialPermissionButtonVisible.not() &&
+        if (isRoleButtonVisible.not() &&
+            isSpecialPermissionButtonVisible.not() &&
             isRuntimePermissionsButtonVisible.not()) {
             Text(
                 text = "All permissions are granted.\nJust use it!",
@@ -72,6 +80,15 @@ private fun MainActivity.Content() {
                     .padding(24.dp),
             )
         } else {
+            if (isRoleButtonVisible) {
+                Button(
+                    onClick = {
+                        requestRole()
+                    },
+                    text = "Get role",
+                )
+            }
+
             if (isSpecialPermissionButtonVisible) {
                 Button(
                     onClick = {
@@ -114,6 +131,14 @@ private fun Button(
     }
 }
 
+val MainActivity.isRoleButtonVisible: Boolean
+    get() = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        (getSystemService(Context.ROLE_SERVICE) as RoleManager)
+            .isRoleHeld(RoleManager.ROLE_CALL_SCREENING).not()
+    } else {
+        false
+    }
+
 val MainActivity.isSpecialPermissionButtonVisible
     get() = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
         Settings.canDrawOverlays(this).not()
@@ -134,6 +159,14 @@ val MainActivity.isRuntimePermissionsButtonVisible
                 this,
                 Manifest.permission.READ_CONTACTS,
             ) != PackageManager.PERMISSION_GRANTED
+
+fun MainActivity.requestRole() {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        val roleManager = getSystemService(Context.ROLE_SERVICE) as RoleManager
+        val intent = roleManager.createRequestRoleIntent(RoleManager.ROLE_CALL_SCREENING)
+        roleLauncher.launch(intent)
+    }
+}
 
 fun MainActivity.requestSpecialPermission() {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {

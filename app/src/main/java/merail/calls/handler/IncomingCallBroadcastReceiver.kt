@@ -14,6 +14,8 @@ import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.TextView
 
+internal const val INCOMING_CALL_END_ACTION_NAME = "ACTION_INCOMING_CALL_END"
+
 class IncomingCallBroadcastReceiver : BroadcastReceiver() {
 
     companion object {
@@ -25,15 +27,24 @@ class IncomingCallBroadcastReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action == TelephonyManager.ACTION_PHONE_STATE_CHANGED) {
-            val phoneNumber = intent.getStringExtra(TelephonyManager.EXTRA_INCOMING_NUMBER)
-            if (phoneNumber != null) {
-                if (intent.getStringExtra(TelephonyManager.EXTRA_STATE) == TelephonyManager.EXTRA_STATE_RINGING) {
-                    showWindow(context, phoneNumber)
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+                val phoneNumber = intent.getStringExtra(TelephonyManager.EXTRA_INCOMING_NUMBER)
+                if (phoneNumber != null) {
+                    if (intent.getStringExtra(TelephonyManager.EXTRA_STATE) == TelephonyManager.EXTRA_STATE_RINGING) {
+                        showWindow(context, phoneNumber)
+                    }
+                    if (intent.getStringExtra(TelephonyManager.EXTRA_STATE) == TelephonyManager.EXTRA_STATE_IDLE ||
+                        intent.getStringExtra(TelephonyManager.EXTRA_STATE) == TelephonyManager.EXTRA_STATE_OFFHOOK) {
+                        closeWindow()
+                    }
                 }
+            } else {
                 if (intent.getStringExtra(TelephonyManager.EXTRA_STATE) == TelephonyManager.EXTRA_STATE_IDLE ||
-                    intent.getStringExtra(TelephonyManager.EXTRA_STATE) == TelephonyManager.EXTRA_STATE_OFFHOOK
-                ) {
-                    closeWindow()
+                    intent.getStringExtra(TelephonyManager.EXTRA_STATE) == TelephonyManager.EXTRA_STATE_OFFHOOK) {
+                    val incomingCallEndIntent = Intent(context, IncomingCallService::class.java).apply {
+                        action = INCOMING_CALL_END_ACTION_NAME
+                    }
+                    context.applicationContext.startService(incomingCallEndIntent)
                 }
             }
         }
